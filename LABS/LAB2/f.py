@@ -9,7 +9,7 @@ for i in range(a):
         students[name] += money
     else:
         students[name] = money
-sortedNames = sorted(students.keys(), key = lambda x:x)
+sortedNames = sorted(students.keys(), key = lambda x : x)
 m = max(students.values())
 
 for i in sortedNames:

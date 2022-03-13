@@ -1,13 +1,14 @@
-dates = []
+str = []
+s = []
+d = ""
 
-while True:
-    s = input()
-    if s == '0':
+while d != "0":
+    s = input().split()
+    d = s[0]
+    if d == "0":
         break
-    print(s)
-    print(s.split())
-    day, month, year = map(str, s.split())
-    dates.append((day, month, year))
-    
-for date in sorted(dates, key=lambda x: (x[2], x[1], x[0])):
-    print(*date)
+    else:
+        m, y = s[1], s[2]
+    str.append((y, m, d))
+for y, m, d in sorted(str):
+    print(d, m, y)
