@@ -1,10 +1,12 @@
 import os
-path = "/home/aldiar/Desktop/2 Semester/PP2/LABS/LAB6"
-print("Directories: ")
-print([name for name in os.listdir(path) if os.path.isdir(os.path.join(path, name))])
 
-print("Files: ")
-print([name for name in os.listdir(path) if not os.path.isdir(os.path.join(path, name))])
+path = input()
+os.chdir(path)
 
-print("Files and directories: ")
-print([name for name in os.listdit(path)])
+dirs = os.listdir(os.getcwd())
+for i in dirs:
+    if os.path.isdir(i):
+        print("directories", i)
+    elif os.path.isfile(i):
+        print("files", i)
+print("all", os.listdir(os.getcwd()))
