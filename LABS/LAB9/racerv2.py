@@ -1,0 +1,198 @@
+import pygame
+from random import randint, randrange
+
+pygame.init()
+
+WIDTH = 800
+HEIGHT = 600
+FPS = 45
+
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
+BLUE = (0, 0, 255)
+PURPLE = (221,160,221)
+
+# creating background
+background = pygame.transform.scale(pygame.image.load("bg.jpeg"), (WIDTH, HEIGHT))
+bgY = 0
+bgY2 = - background.get_height()
+BGSPEED = 7
+SCORE = 0
+
+
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption('RACER')
+
+# creating our car
+class Player(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.x = 400
+        self.y = 500
+        self.speed = 10
+        self.image = pygame.transform.scale(pygame.image.load('Audi.png'),(40,90))
+        self.surf = pygame.Surface((40,90), pygame.SRCALPHA)
+        self.rect = self.surf.get_rect(center=(self.x,self.y))
+    
+    # logic of player's movement
+    def move(self):
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_LEFT] and self.rect.left >= 0:
+            self.rect.move_ip(-self.speed, 0)
+        if keys[pygame.K_RIGHT] and self.rect.right <= WIDTH:
+            self.rect.move_ip(self.speed, 0)
+        if keys[pygame.K_UP] and self.rect.top >= 0:
+            self.rect.move_ip(0,-self.speed)
+        if keys[pygame.K_DOWN] and self.rect.bottom <= HEIGHT:
+            self.rect.move_ip(0, self.speed)
+
+    # rect.move_ip changes the pygame.Rect object itself, rect.move does not
+    # change the object, but it returns a new object with the same size and "moved" position.
+
+    # drawing player's car 
+    def draw(self):
+        self.surf.blit(self.image, (0,0))
+        screen.blit(self.surf, self.rect)
+
+# creating police cars
+class Enemy(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.speed = randint(10, 15)
+        self.x = randint(80, WIDTH - 80)
+        self.y = -100
+        self.image = pygame.transform.scale(pygame.image.load("Police.png"), (40,90))
+        self.surf = pygame.Surface((40,90), pygame.SRCALPHA)
+        self.rect = self.surf.get_rect(center = (self.x, self.y))
+    
+    # enemy movement
+    def move(self):
+        self.rect.move_ip(0, self.speed)
+    
+    # enemy drawing
+    def draw(self):
+        self.surf.blit(self.image, (0,0))
+        screen.blit(self.surf, self.rect)
+
+     # redrawing enemies and coins when out of window
+    def kil(self):
+        if self.rect.top > HEIGHT:
+            self.kill()
+    
+    # adding speed when the score is more than 4
+    def increase(self):
+        if SCORE >= 5:
+            self.rect.move_ip(0, self.speed / 4)
+
+# creating coins
+class Coin(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.speed = randint(10, 15)
+        self.x = randint(80, WIDTH - 80)
+        self.y = -100
+        self.image = pygame.transform.scale(pygame.image.load("Gold_1.png"), (25,25))
+        self.surf = pygame.Surface((25,25), pygame.SRCALPHA)
+        self.rect = self.surf.get_rect(center = (self.x, self.y))
+    
+    # coin movement
+    def move(self):
+        self.rect.move_ip(0, self.speed)
+    
+    # coin drawing
+    def draw(self):
+        self.surf.blit(self.image, (0,0))
+        screen.blit(self.surf, self.rect)
+    
+    # redrawing enemies and coins when out of window
+    def kil(self):
+        if self.rect.top > HEIGHT:
+            self.kill()
+
+clock = pygame.time.Clock()
+font = pygame.font.SysFont("Times New Roman", 25)
+font_large = pygame.font.SysFont("Times New Roman", 50)
+
+# spawning enemies and coins
+enemies = pygame.sprite.Group([Enemy() for _ in range(4)])
+coins = pygame.sprite.Group([Coin() for _ in range(5)])
+
+p = Player()
+
+game_over = font_large.render("GAME OVER", False, BLACK)
+finished = False
+lose = False
+
+# main loop
+while not finished:
+    clock.tick(FPS)
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            finished = True
+    # blit method for background
+    screen.blit(background,(0,bgY))
+    screen.blit(background,(0,bgY2))
+
+    # movement of background
+    if bgY > background.get_height():
+        bgY = -background.get_height()
+    if bgY2 > background.get_height():
+        bgY2 = -background.get_height()
+    bgY += BGSPEED
+    bgY2 += BGSPEED
+
+    # displaying score
+    text = font.render(f"SCORE: {SCORE}", False, RED)
+    screen.blit(text, (650,20))
+
+    p.draw()
+    p.move()
+
+    # adding new enemies and coins
+    if len(enemies) < 3:
+        enemies.add(Enemy())
+    if len(coins) < 4:
+        coins.add(Coin())
+
+    # logic for enemies
+    for enemy in enemies:
+        enemy.draw()
+        enemy.move()
+        enemy.kil()
+        enemy.increase()
+
+    # logic for coins
+    for coin in coins:
+        coin.draw()
+        coin.move()
+        coin.kil()
+
+    if pygame.sprite.spritecollide(p, enemies, False):
+        lose = True
+
+    # adding score
+    for coin in coins:
+        if pygame.sprite.collide_rect(p, coin):
+            coin.kill()
+            SCORE += randint(1, 3)
+            coins.add(Coin())
+
+    # collide of enemies
+    for enemy in enemies:
+        for enemy2 in enemies:
+            if enemy != enemy2 and pygame.sprite.collide_rect(enemy, enemy2):
+                enemy2.kill()
+    
+    # displaying "Game Over!" when lose
+    while lose:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                finished = True
+                lose = False
+        screen.blit(game_over, game_over.get_rect(center=(WIDTH // 2, HEIGHT // 3)))
+        pygame.display.flip()
+
+    pygame.display.flip()
+pygame.quit()

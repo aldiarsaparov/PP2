@@ -1,0 +1,14 @@
+Instruction for paintv2.py
+
+Press '1' to draw rectangle
+Press '2' to draw circle
+Press '3' to use eraser
+Press '4' to draw square
+Press '5' to draw rhombus
+Press '6' to draw equilaterial triangle
+Press '7' to draw right triangle
+
+
+
+
+
