@@ -26,10 +26,8 @@ if data == None:
 pygame.init()
 
 WIDTH, HEIGHT = 800, 640
-FPS = 15
+FPS = 7
 cell = 40
-
-lose = False
 
 score = 0
 
@@ -49,6 +47,7 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption('Snake')
 
 finished = False
+lose = False
 
 clock = pygame.time.Clock()
 def paused(username,level,score):
@@ -111,6 +110,15 @@ class Snake:
                 if event.key==pygame.K_p:
                     pause=False 
 
+        # for i in range(len(self.body) - 1, 0, -1):
+        #     self.body[i][0] = self.body[i - 1][0]
+        #     self.body[i][1] = self.body[i - 1][1]
+
+        # self.body[0][0] += self.dx
+        # self.body[0][1] += self.dy
+
+        # self.body[0][0] %= WIDTH
+        # self.body[0][1] %= HEIGHT
         for i in range(len(self.body) - 1, 0, -1):
             self.body[i][0] = self.body[i - 1][0]
             self.body[i][1] = self.body[i - 1][1]
@@ -118,8 +126,18 @@ class Snake:
         self.body[0][0] += self.dx
         self.body[0][1] += self.dy
 
-        self.body[0][0] %= WIDTH
-        self.body[0][1] %= HEIGHT
+        # going from right side to left and from left to right and from top to bottom and from bottom to top
+        if self.body[0][0] > WIDTH:
+            self.body[0][0] = 0
+
+        if self.body[0][1] > HEIGHT:
+            self.body[0][1] = 0
+
+        if self.body[0][0] < 0:
+            self.body[0][0] = WIDTH
+
+        if self.body[0][1] < 0:
+            self.body[0][1] = HEIGHT
 
     def draw(self):
         for block in self.body:
@@ -132,13 +150,16 @@ class Snake:
             self.body.append([1000, 1000])
 
     def collide_self(self):
-        global finished
+        global finished, lose
         if self.body[0] in self.body[1:]:
             finished = True
+            lose = True
 
     def check_food(self, f: Food):
         if [f.x, f.y] in self.body:
             f.redraw()
+            global score
+            score += randint(1, 3) # random weight
 
 
 s = Snake()
@@ -154,11 +175,25 @@ while not finished:
     for event in events:
         if event.type == pygame.QUIT:
             finished = True
-            lose = False
-        if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
+        if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
             pause = True
 
-    screen.fill(WHITE)
+    while pause:
+        render_end = font_pause.render("PAUSE", True, pygame.Color('orange'))
+        screen.blit(render_end, (335, 300))
+        pygame.display.flip()
+        
+        sql = '''
+            UPDATE users SET score = %s, level = %s WHERE user_name = %s;
+        '''
+        current.execute(sql, [score, level, username]) 
+        config.commit()    
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                exit()
+        key = pygame.key.get_pressed()
+        if key[pygame.K_p]:
+            pause = False 
 
     walls_coor = open(f"wall{level}.txt", "r").readlines()
 
@@ -170,16 +205,26 @@ while not finished:
             if each == "#":
                 walls.append(Wall(j * cell, i * cell))
 
+        while lose:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    finished = not finished
+                    lose = not lose
+            go_font = pygame.font.SysFont("Arial", 40)
+            go_img = go_font.render("Game Over!", True, BLACK)
+            screen.blit(go_img, go_img.get_rect(center=(WIDTH // 2, HEIGHT // 2)))
+            pygame.display.flip()
+
+    screen.fill(WHITE)
     if s.score == 3:
         level = 1
-        FPS = 7
-
+        FPS = 9
     if s.score == 5:
         level = 2
-        FPS = 10
+        FPS = 11
     if s.score == 7:
         level = 3
-        FPS = 12
+        FPS = 13
 
     f.draw()
     s.draw()
@@ -188,59 +233,26 @@ while not finished:
     s.collide_self()
     s.check_food(f)
 
+    for wall in walls:
+        wall.draw()
+        if f.x == wall.x and f.y == wall.y:
+            f.redraw()
+
+        if s.body[0][0] == wall.x and s.body[0][1] == wall.y:
+            lose = True
+
     text = font.render(f"Score:{s.score}", True, BLACK)
     text2 = font.render(f"Level: {level}", True, BLACK)
     screen.blit(text, (0, 0))
-    screen.blit(text2, (0, 40))
+    screen.blit(text2, (150, 0))
     pygame.display.flip()
     score = s.score
 
-    while lose == True:
-        screen.blit(game_over, (190,240))
-        text = font_medium.render(f'SCORE: {score}', True, (255,255,255))
-        screen.blit(text, (200, 270))    
-        pygame.display.update()
-    
-        if score > highscore:
-                highscore = score
-        sql = '''
-            UPDATE players_score SET score = %s, level = %s WHERE name = %s;
-        '''
-        current.execute(sql, [highscore, level, username])
-        config.commit()
-
-
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                finished = True
-                lose = False
-                pygame.quit()
-
-    while paused:
-        clock.tick(FPS)
-        events = pygame.event.get()
-        for event in events:
-            if event.type == pygame.QUIT:
-                pause = False
-                finished = True
-                
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
-                pause = False   
-        
-        pygame.display.flip()
-
 pygame.quit()
-
-if score > highscore:
-    highscore = score
-
 sql = '''
     UPDATE users SET score = %s, level = %s WHERE user_name = %s;
 '''
 
-existing_name = '''
-SELECT user_name FROM users 
-'''
 current.execute(sql, [score, level, username])
 config.commit()
 current.close()
